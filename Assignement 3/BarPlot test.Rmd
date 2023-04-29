@@ -1,0 +1,127 @@
+---
+title: "Test"
+output: html_document
+date: "2023-04-27"
+resource_files:
+- "BarPlot-test.html"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+options(scipen = 999)
+uniInd1 <- read.csv("unicef_indicator_1.csv")
+uniInd2 <- read.csv("unicef_indicator_2.csv")
+uniMetadata <- read.csv("unicef_metadata.csv") %>%
+filter(year == 2007)
+knitr::opts_chunk$set(echo = TRUE)
+uniMetadata_no_na <- na.omit(uniMetadata)
+```
+
+[How does poor access to sanitation contribute to the high BMI rates observed in developing countries, and what can be done to address this issue?]{style="color:blue"}
+
+[Sanitation, pure water, and economic growth are linked.]{style="color:black"}
+
+Sanitation and clean water protect public health in emerging nations. Sanitation and water access can boost these nations' economies, according to a recent study.GDP per capita, average body mass index, and clean water and sanitation were positively correlated in [46 developing nations]{style="color:black; font-style:italic; font-weight:bold"}. These results suggest that improving population health and happiness improves clean water and sanitation, which boosts economic growth in developing nations.
+
+Data shows: Poor population prevention management can cause [overeating, undernutrition, and high BMI]{style="color:black; font-style:italic; font-weight:bold"} before 5 in emerging nations. Culture matters in Africa, where fat means wealth. Globalization makes low-quality products more available, and the nations studied have high BMIs because they are not raw material producers and discourage physical activity. Sanitation, prevention, and social factors raise BMI rates in emerging nations. Toilets and handwashing stands avoid waterborne diseases and poor hygiene. Obesity, poor growth, and malnutrition can follow.
+
+Poor hygiene [spreads diarrhea, causing weight loss and starvation in children and adults]{style="color:black; font-style:italic; font-weight:bold"}. Poor sanitation and hygiene spread parasitic diseases that affect nutrient absorption and metabolism, increasing the risk of malnutrition and obesity. This stresses the need for sanitation and clean water in developing nations. Governments, non-profits, and for-profits can help local communities handle water and sanitation facilities, fund infrastructure projects, and educate about hygiene.
+
+By boosting output and lowering water-related medical costs, clean water and sanitation can boost the economy. Clean water and sanitation are important for public health and economic growth. Governments, non-governmental groups, and private companies must invest in water and sanitation infrastructure and public hygiene education to boost long-term economic growth and living standards.
+
+```{r}
+barPlotData <- subset(uniMetadata, year==2021)
+barPlotData <- barPlotData[, c(1,8)]
+colnames(barPlotData)[2] <- "GDP_per_capita"
+barPlotData <- barPlotData[order(barPlotData$GDP_per_capita, decreasing = TRUE),][1:12,]
+barPlotData$country <- factor(barPlotData$country, levels = barPlotData$country[order(barPlotData$GDP_per_capita)])
+ggplot(barPlotData, aes(x = country, y = GDP_per_capita, fill = country)) + geom_col()+
+geom_text(aes(label = GDP_per_capita), vjust = 1.6, color = "black") + coord_flip() +
+labs(title = "Bar chart: Top 12 GDP per capita countries in 2021",
+x = "Country", y = "GDP per capita") +
+theme(legend.position = "none")
+
+```
+
+###Carte du monde Test carte du monde
+
+```{r}
+world_coordinates <- map_data("world")
+World_metadata <- full_join(world_coordinates, uniMetadata, by = c("region" = "country"))
+
+ggplot(data = World_metadata) +
+  aes(x = long, y = lat, group = group, fill = Population..total) +
+  geom_polygon() +
+  scale_fill_gradientn(colors = brewer.pal(9, "Reds"), name = "Population (log scale)", 
+                       trans = "log10", breaks = c(1e5, 1e6, 1e7, 1e8, 1e9)) +
+  theme_void() +
+  labs(title = "World Map chart of total population by country") +
+  theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+        legend.position = "right",
+        legend.direction = "vertical",
+        legend.key.width = unit(1.5, "cm"),
+        legend.key.height = unit(0.5, "cm"),
+        legend.title = element_text(size = 7),
+        legend.text = element_text(size = 7),
+        legend.background = element_rect(fill = "white", size = 0.5, linetype = "solid"),
+        panel.grid = element_line(size = 0.2, color = "grey"))
+
+```
+
+```{r}
+ggplot(data = top_thirty, aes(x = alpha_2_code, y = GDP.per.capita..constant.2015.US.., color = GDP.per.capita..constant.2015.US..)) +
+  geom_point() +
+  ggtitle("scatterplot GDP/country") +
+  xlab("country") +
+  ylab("GDP") +
+  scale_color_gradient(low = "green", high = "red", name = "Legend") +
+  theme(axis.text.y = element_text(margin = margin(l = 0.1))) +
+  stat_smooth(method = "lm")
+```
+
+```{r}
+min_length <- min(length(uniInd1$obs_value), length(uniInd2$obs_value))
+
+# Create temporary vectors with lengths that are multiples of the length of the shorter vector
+vec1_new <- rep(uniInd1$obs_value[1:min_length], length.out = min_length)
+vec2_new <- uniInd2$obs_value[1:min_length]
+
+
+# Combine the two vectors into a matrix using cbind()
+combined_data <- cbind(vec1_new, vec2_new)
+
+# Create a data frame from the combined data matrix with the country column
+df <- data.frame(vec1 = vec1_new, vec2 = vec2_new, country = c(rep(uniInd1$country[1:min_length], length.out = min_length), rep(uniInd2$country[1:min_length], length.out = min_length)))
+
+# Calculate the mean of vec1 and vec2
+mean_vec1 <- mean(df$vec1)
+mean_vec2 <- mean(df$vec2)
+
+# Create a scatterplot with ggplot2 and sort the points by their distance to the mean
+ggplot(data = df, aes(x = vec1, y = vec2, group = country, color = sqrt((vec1-mean_vec1)^2 + (vec2-mean_vec2)^2))) +
+  geom_point() +
+  geom_vline(xintercept = mean_vec1, color = "yellow", linetype = "dashed") +
+  geom_hline(yintercept = mean_vec2, color = "green", linetype = "dashed") +
+  ggtitle("BMI-for-age <-1 SD versus Proportion of population using on-site sanitation facilities with human waste disposed in situ") +
+  xlab("Acess to sanitation") +
+  ylab("BMI") +
+  scale_color_gradient(low = "purple", high = "red") +
+  labs(color = "Distance to Means") # add a gradient color scale
+
+```
+
+```{r}
+uniInd2 %>%
+  filter(!is.na(obs_value)) %>%
+  filter(time_period >= 2000 & time_period <= 2018) %>%
+  group_by(time_period) %>%
+  summarise(mean_obs = mean(obs_value)) %>%
+  ggplot(aes(x = time_period, y = mean_obs, fill = mean_obs)) +
+  geom_bar(stat = "identity") +
+  ggtitle("Time-series chart: Average BMI for age under 5 yo per year") +
+  xlab("Year") +
+  ylab("Average BMI for age under 5 yo") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_gradient(low = "blue", high = "red")
+```
